@@ -108,22 +108,6 @@ RetInfo *ClusterClient::String_Set(const char *key,
         } else {
             cout << "add new client" << endl;
             add_new_client(ret->ip_port);
-#if 0
-            char ip_buf[IP_ADDR_LEN] = {0};
-            int32_t port = 0;
-            char *ptr = NULL;
-
-            // add new client
-            if ((ptr = std::strchr(ret->ip_port, ':')) != NULL) {
-                strncpy(ip_buf, ret->ip_port, ptr - ret->ip_port);
-                port = std::atoi(ptr + 1);
-
-                ClusterRedis *cr = new ClusterRedis;
-                cr->Init(ip_buf, port);
-                clients.insert(pair<string,
-                               ClusterRedis *>(string(ret->ip_port), cr));
-            }
-#endif
         }
         String_Set(key, value, expiration);
     }
@@ -149,26 +133,10 @@ RetInfo *ClusterClient::String_Get(const char *key, string &value)
             g_curr_cr = cr;
         } else {
             add_new_client(ret->ip_port);
-#if 0
-            char ip_buf[IP_ADDR_LEN] = {0};
-            int32_t port = 0;
-            char *ptr = NULL;
-
-            // add new client
-            if ((ptr = std::strchr(ret->ip_port, ':')) != NULL) {
-                strncpy(ip_buf, ret->ip_port, ptr - ret->ip_port);
-                port = std::atoi(ptr + 1);
-
-                ClusterRedis *cr = new ClusterRedis;
-                cr->Init(ip_buf, port);
-                clients.insert(pair<string,
-                               ClusterRedis *>(string(ret->ip_port), cr));
-            }
-#endif
         }
 
         if ((ret = String_Get(key, value)) != NULL) {
-            // the MOVED master node is down
+            // the MOVED master node can't connect
             if (ret->errorno == REDIS_ERROR_DOWN) {
                 // XXX:TODO connect to slave node
             }

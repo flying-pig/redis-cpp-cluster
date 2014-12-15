@@ -4,7 +4,7 @@
  *  Created on: Aug 25, 2014
  *      Author: meiyuli
  */
-#include "../log.h"
+#include "log.h"
 #include "Cluster_Redis.h"
 
 #include <stdlib.h>
@@ -588,7 +588,7 @@ RetInfo* ClusterRedis::Hash_Hincybyfloat(const char *key, const char *field, dou
 				this->FreeSources();
 				return ri;
 			}
-			logg(ERROR, "fail to Hash_Hincybyfloat, key: %s, field: %s, value: %s, errorInfo: %s",
+			logg(ERROR, "fail to Hash_Hincybyfloat, key: %s, field: %s, value: %.2f, errorInfo: %s",
 					key, field, value, _redisReply->str);
 		}
 
