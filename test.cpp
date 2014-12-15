@@ -1,5 +1,5 @@
 #include <iostream>
-#include <Cluster_Redis.h>
+#include "Cluster_Redis.h"
 #include "cluster_client.h"
 #include "log.h"
 
@@ -8,7 +8,8 @@ using std::endl;
 
 int main(int argc, char** args)
 {
-    
+    (void)argc;
+    (void)args;
     ClusterClient cr;
 
     cr.Init("127.0.0.1:7000;127.0.0.1:7001;127.0.0.1:7002");

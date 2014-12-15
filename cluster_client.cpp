@@ -48,16 +48,17 @@ int32_t ClusterClient::Init(const char *redis_master_ips)
 int32_t ClusterClient::Uninit()
 {
     map<string, ClusterRedis *>::iterator itr = clients.begin();
-    for (itr; itr != clients.end(); ++itr) {
+    for (; itr != clients.end(); ++itr) {
         logg("DEBUG", "%s, %p", itr->first.c_str(), itr->second);
         itr->second->UnInit();
     }
+    return 0;
 }
 
 void ClusterClient::show_clients()
 {
     map<string, ClusterRedis *>::iterator itr = clients.begin();
-    for (itr; itr != clients.end(); ++itr) {
+    for (; itr != clients.end(); ++itr) {
         logg("DEBUG", "%s, %p", itr->first.c_str(), itr->second);
     }
 }
@@ -206,7 +207,6 @@ int32_t ClusterClient::add_new_client(const char *ip_addr)
             return CLUSTER_ERR;
         }
     }
-    show_clients();
 
     return CLUSTER_OK;
 }
