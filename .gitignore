@@ -1,0 +1,11 @@
+*.swp
+*.bak
+
+*.o
+*.so
+*.lo
+
+*.a
+*.la
+
+test
