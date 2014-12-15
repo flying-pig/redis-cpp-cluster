@@ -3,5 +3,9 @@
 
 #include <stdio.h>
 
+#if 0
 #define logg(type, fmt, args...)  printf("%s:%d | "fmt"\n", __func__, __LINE__, ##args)
+#else
+#define logg(type, fmt, args...)
+#endif
 #endif

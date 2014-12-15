@@ -3,7 +3,9 @@ LDFLAGS=-g -L./ -lemarrediscluster -L/usr/local/lib -lhiredis
 
 objecets=Cluster_Redis.o cluster_client.o
 
-all: libemarrediscluster.a test
+lib_exe=libemarrediscluster.a test cluster_test
+
+all: $(lib_exe)
 
 libemarrediscluster.a: $(objecets)
 	ar r $@ $^
@@ -15,10 +17,13 @@ libemarrediscluster.so: $(objecets)
 test: test.o
 	g++ -o $@ $^ $(LDFLAGS)
 
+cluster_test: cluster_test.o
+	g++ -o $@ $^ $(LDFLAGS)
+
 %.o: %.cpp
 	g++ -c $^ $(CFLAGS)
 
 clean:
-	rm *.o libemarrediscluster.a
+	rm *.o -f $(lib_exe)
 
-.PHONY: libemarrediscluster.a libemarrediscluster.so
+.PHONY: libemarrediscluster.so

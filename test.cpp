@@ -1,4 +1,5 @@
 #include <iostream>
+#include  <sys/time.h>
 #include "Cluster_Redis.h"
 #include "cluster_client.h"
 #include "log.h"
@@ -14,10 +15,21 @@ int main(int argc, char** args)
 
     cr.Init("127.0.0.1:7000;127.0.0.1:7001;127.0.0.1:7002");
     cr.show_clients();
-    //cr.String_Set("aaaa01", "10000000000", 300);
-    //cr.String_Set("aaaa02", "20000000000", 300);
-    //cr.String_Set("aaaa03", "30000000000", 300);
-    //cr.String_Set("aaaa04", "40000000000", 300);
+    struct timeval start;
+    struct timeval end;
+    int32_t time_use_usec;
+    int32_t time_use_msec;
+    gettimeofday(&start, NULL);
+    cr.String_Set("aaaa01", "10000000000", 300);
+    gettimeofday(&end, NULL);
+
+    time_use_usec = (end.tv_sec - start.tv_sec) * 1000000 + (end.tv_usec - start.tv_usec);
+    cout << "time use: " << time_use_usec << "usec" << endl;
+    time_use_msec = (end.tv_sec - start.tv_sec) * 1000 + (end.tv_usec - start.tv_usec) / 1000;
+    cout << "time use: " << time_use_msec << "msec" << endl;
+    cr.String_Set("aaaa02", "20000000000", 300);
+    cr.String_Set("aaaa03", "30000000000", 300);
+    cr.String_Set("aaaa04", "40000000000", 300);
 
     cout << "Get testing ........" << endl;
     string value1;
@@ -30,7 +42,11 @@ int main(int argc, char** args)
     cr.String_Get("aaaa01", value1);
     cr.String_Get("aaaa02", value2);
     cr.String_Get("aaaa03", value3);
+    gettimeofday(&start, NULL);
     cr.String_Get("aaaa04", value4);
+    gettimeofday(&end, NULL);
+    time_use_usec = (end.tv_sec - start.tv_sec) * 1000000 + (end.tv_usec - start.tv_usec);
+    cout << "time use: " << time_use_usec << "usec" << endl;
     cr.String_Get("aaaa05", value5);
 
     cout << "aaaa01: " << value1 << "\n"
