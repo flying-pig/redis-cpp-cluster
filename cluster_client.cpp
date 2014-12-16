@@ -90,15 +90,25 @@ void ClusterClient::ip_list_unserailize(const char *ip_list)
     delete[] buf;
 }
 
+void ReleaseRetInfoInstance(RetInfo *ri)
+{
+    if (ri == NULL) return;
+    g_curr_cr->ReleaseRetInfoInstance(ri);
+}
+
 RetInfo *ClusterClient::String_Set(const char *key,
-        const char *value,
-        int32_t expiration)
+                                   const char *value,
+                                   int32_t expiration)
 {
     RetInfo *ret = NULL;
     ClusterRedis *cr = NULL;
+    if (!g_curr_cr) {
+        g_curr_cr = clients.begin()->second;
+        if (g_curr_cr == NULL) return NULL;
+    }
     ret = g_curr_cr->String_Set(key, value, expiration);
 
-    if (ret->errorno == REDIS_ERROR_MOVE) {
+    if (ret != NULL && ret->errorno == REDIS_ERROR_MOVE) {
         map<string, ClusterRedis *>::iterator itr;
         if ((itr = clients.find(ret->ip_port)) != clients.end()) {
             cr = itr->second;
@@ -106,7 +116,28 @@ RetInfo *ClusterClient::String_Set(const char *key,
         } else {
             add_new_client(ret->ip_port);
         }
-        String_Set(key, value, expiration);
+
+        if ((ret = String_Set(key, value, expiration)) == NULL) {
+            // the MOVED master node can't connect
+            // XXX:TODO connect to slave node
+            return ret;
+        }
+    }
+
+    if (ret != NULL && ret->errorno == REDIS_ERROR_DOWN) {
+        // just return
+        return ret;
+    }
+
+    // the current node connection unvalide
+    if (ret == NULL) {
+        char ip_port[32] = {0};
+        snprintf(ip_port, IP_ADDR_LEN, "%s:%d",
+                 g_curr_cr->get_ip(), g_curr_cr->get_port());
+        clients.erase(string(ip_port));
+        g_curr_cr->UnInit();
+        g_curr_cr = NULL;
+        ret = String_Set(key, value, expiration);
     }
 
     return ret;
@@ -131,19 +162,26 @@ RetInfo *ClusterClient::String_Get(const char *key, string &value)
             add_new_client(ret->ip_port);
         }
 
-        if ((ret = String_Get(key, value)) != NULL) {
+        if ((ret = String_Get(key, value)) == NULL) {
             // the MOVED master node can't connect
-            if (ret->errorno == REDIS_ERROR_DOWN) {
-                // XXX:TODO connect to slave node
-            }
+            // XXX:TODO connect to slave node
+            return ret;
         }
     }
 
     if (ret != NULL && ret->errorno == REDIS_ERROR_DOWN) {
-        clients.erase(string(ret->ip_port));
+        // just return
+        return ret;
+    }
+
+    if (ret == NULL) {
+        char ip_port[32] = {0};
+        snprintf(ip_port, IP_ADDR_LEN, "%s:%d",
+                 g_curr_cr->get_ip(), g_curr_cr->get_port());
+        clients.erase(string(ip_port));
         g_curr_cr->UnInit();
         g_curr_cr = NULL;
-        String_Get(key, value);
+        ret = String_Get(key, value);
     }
 
     return ret;

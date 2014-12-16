@@ -91,6 +91,8 @@ public:
 
 	RetInfo* Lua_Script(const char* script, const char *key, const char* field1, const char* field2);
 	RetInfo* Lua_Script(const char* script, const char *key, const char* field1, const char* field2, const char* field3);
+	char *get_ip() { return _redisIP; }
+	int32_t get_port() { return _redisPort; }
 private:
 	ClusterRedis(const ClusterRedis&);
 	ClusterRedis& operator=(const ClusterRedis&);

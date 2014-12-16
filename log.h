@@ -3,7 +3,7 @@
 
 #include <stdio.h>
 
-#if 0
+#if 1
 #define logg(type, fmt, args...)  printf("%s:%d | "fmt"\n", __func__, __LINE__, ##args)
 #else
 #define logg(type, fmt, args...)

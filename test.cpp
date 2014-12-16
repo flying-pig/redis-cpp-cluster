@@ -47,7 +47,8 @@ int main(int argc, char** args)
     gettimeofday(&end, NULL);
     time_use_usec = (end.tv_sec - start.tv_sec) * 1000000 + (end.tv_usec - start.tv_usec);
     cout << "time use: " << time_use_usec << "usec" << endl;
-    cr.String_Get("aaaa05", value5);
+    RetInfo *ret = cr.String_Get("aaaa05", value5);
+    printf("aaaa5 ret info: %d, %s\n", ret->errorno, ret->ip_port);
 
     cout << "aaaa01: " << value1 << "\n"
          << "aaaa02: " << value2 << "\n"
