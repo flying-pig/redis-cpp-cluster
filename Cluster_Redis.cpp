@@ -46,6 +46,8 @@ int32_t ClusterRedis::Init(const char *redis_ip, const int32_t redis_port) {
 
 	struct timeval timeout = { 1, 500000}; // 1.5 seconds
 	_redisContext = redisConnectWithTimeout(redis_ip, redis_port, timeout);
+	if (!_redisIP) _redisIP = strdup(redis_ip);
+	_redisPort = redis_port;
 	if (!_redisContext || _redisContext->err) {
 		if (_redisContext) {
 			logg(ERROR, "fail to connect redis, ip: %s, port: %d, errorInfo: %s",
@@ -59,9 +61,6 @@ int32_t ClusterRedis::Init(const char *redis_ip, const int32_t redis_port) {
 
 	//test, connect Redis-server
 	//if (this->Connect_Ping()) return -3;
-
-	if (!_redisIP) _redisIP = strdup(redis_ip);
-	_redisPort = redis_port;
 
 	this->FreeSources();
 	return 0;

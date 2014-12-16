@@ -11,8 +11,10 @@
 #include <vector>
 #include "Cluster_Redis.h"
 
-#define CLUSTER_ERR -1
-#define CLUSTER_OK   0
+#define CLUSTER_OK          0
+#define CLUSTER_ERR        -1
+#define CLUSTER_ERR_DOWN    REDIS_ERROR_DOWN
+#define CLUSTER_ERR_REQ     REDIS_ERROR_REQ
 
 using std::pair;
 
@@ -24,7 +26,7 @@ class ClusterClient {
         int32_t Init(const char *redis_master_ips);
         int32_t Uninit();
         void show_clients();
-        RetInfo *String_Set(const char *key,
+        int32_t String_Set(const char *key,
                 const char *value,
                 int32_t expiration);
         RetInfo *String_Get(const char *key, string &value);

@@ -73,16 +73,16 @@ void ClusterClient::ip_list_unserailize(const char *ip_list)
     pair<string, int> tmpPair; //(string(ip_buff),port);
     while (NULL != tokenPtr)
     {
-		printf("ip list[%s]\n", tokenPtr);
-		memset(ip_buff, 0, sizeof(ip_buff));
-		port = 0;
-		tmpPtr = std::strchr(tokenPtr, ':');
-		strncpy(ip_buff, tokenPtr, tmpPtr - tokenPtr);
-		port = std::atoi(tmpPtr + 1);
-		tmpPair.first = string(ip_buff);
-		tmpPair.second = port;
-		cluster_masters.push_back(tmpPair);
-		tokenPtr = strtok(NULL, REDIS_IP_SPLIT_CHAR);
+        printf("ip list[%s]\n", tokenPtr);
+        memset(ip_buff, 0, sizeof(ip_buff));
+        port = 0;
+        tmpPtr = std::strchr(tokenPtr, ':');
+        strncpy(ip_buff, tokenPtr, tmpPtr - tokenPtr);
+        port = std::atoi(tmpPtr + 1);
+        tmpPair.first = string(ip_buff);
+        tmpPair.second = port;
+        cluster_masters.push_back(tmpPair);
+        tokenPtr = strtok(NULL, REDIS_IP_SPLIT_CHAR);
     }
 
     delete[] buf;
@@ -94,15 +94,16 @@ void ClusterClient::ReleaseRetInfoInstance(RetInfo *ri)
     curr_cr_->ReleaseRetInfoInstance(ri);
 }
 
-RetInfo *ClusterClient::String_Set(const char *key,
+int32_t ClusterClient::String_Set(const char *key,
                                    const char *value,
                                    int32_t expiration)
 {
     RetInfo *ret = NULL;
+    int32_t res = 0;
     ClusterRedis *cr = NULL;
     if (!curr_cr_) {
         curr_cr_ = clients.begin()->second;
-        if (curr_cr_ == NULL) return NULL;
+        if (curr_cr_ == NULL) return CLUSTER_ERR;
     }
     ret = curr_cr_->String_Set(key, value, expiration);
 
@@ -115,30 +116,40 @@ RetInfo *ClusterClient::String_Set(const char *key,
             add_new_client(ret->ip_port);
         }
 
-        if ((ret = String_Set(key, value, expiration)) == NULL) {
+        curr_cr_->ReleaseRetInfoInstance(ret);
+        if ((res = String_Set(key, value, expiration)) == CLUSTER_ERR_REQ) {
             // the MOVED master node can't connect
             // XXX:TODO connect to slave node
-            return ret;
+            return CLUSTER_ERR;
+        } else {
+            return res;
         }
     }
 
+    // cluster unvalide
     if (ret != NULL && ret->errorno == REDIS_ERROR_DOWN) {
         // just return
-        return ret;
+        curr_cr_->ReleaseRetInfoInstance(ret);
+        return CLUSTER_ERR_DOWN;
     }
 
     // the current node connection unvalide
-    if (ret == NULL) {
+    if (ret == NULL || ret->errorno == REDIS_ERROR_REQ) {
+        //(ret!=NULL && ret->errorno == REDIS_ERROR_REQ)) {
         char ip_port[32] = {0};
         snprintf(ip_port, IP_ADDR_LEN, "%s:%d",
                  curr_cr_->get_ip(), curr_cr_->get_port());
         clients.erase(string(ip_port));
         curr_cr_->UnInit();
         curr_cr_ = NULL;
-        ret = String_Set(key, value, expiration);
+        res = String_Set(key, value, expiration);
+    } else {
+        curr_cr_->ReleaseRetInfoInstance(ret);
+        return ret->errorno;
     }
 
-    return ret;
+    curr_cr_->ReleaseRetInfoInstance(ret);
+    return res;
 }
 
 RetInfo *ClusterClient::String_Get(const char *key, string &value)
@@ -201,6 +212,7 @@ int32_t ClusterClient::add_new_client(const char *ip_addr)
         pair<map<string, ClusterRedis *>::iterator, bool> ret;
         ret = clients.insert(pair<string,
                        ClusterRedis *>(string(ip_addr), cr));
+        curr_cr_ = cr;
         if (ret.second == false) {
             logg("ERROR", "insert <%s, %p> failed, already existed!",
                  ret.first->first.c_str(), ret.first->second);
