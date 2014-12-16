@@ -19,7 +19,7 @@ using std::pair;
 class ClusterClient {
 
     public:
-        explicit ClusterClient() {};
+        explicit ClusterClient():curr_cr_(NULL) {};
         ~ClusterClient() {};
         int32_t Init(const char *redis_master_ips);
         int32_t Uninit();
@@ -34,6 +34,7 @@ class ClusterClient {
     private:
         map<string, ClusterRedis *> clients;
         std::vector<pair<string,int> > cluster_masters;
+        ClusterRedis *curr_cr_;
 
         // ip_list format: <ip:port>;<ip:port>;...
         // 192.168.0.1:6379;192.168.0.2:6379;...

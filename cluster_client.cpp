@@ -19,8 +19,6 @@
 using std::cout;
 using std::endl;
 
-ClusterRedis *g_curr_cr;
-
 int32_t ClusterClient::Init(const char *redis_master_ips)
 {
     ip_list_unserailize(redis_master_ips);
@@ -39,7 +37,7 @@ int32_t ClusterClient::Init(const char *redis_master_ips)
         if (cr->Init(itr->first.c_str(), itr->second) < 0) continue;
         clients.insert(pair<string, ClusterRedis *>(string(addr), cr));
 
-        if (!g_curr_cr) g_curr_cr = cr;
+        if (!curr_cr_) curr_cr_ = cr;
     }
 
     return 0;
@@ -93,7 +91,7 @@ void ClusterClient::ip_list_unserailize(const char *ip_list)
 void ClusterClient::ReleaseRetInfoInstance(RetInfo *ri)
 {
     if (ri == NULL) return;
-    g_curr_cr->ReleaseRetInfoInstance(ri);
+    curr_cr_->ReleaseRetInfoInstance(ri);
 }
 
 RetInfo *ClusterClient::String_Set(const char *key,
@@ -102,17 +100,17 @@ RetInfo *ClusterClient::String_Set(const char *key,
 {
     RetInfo *ret = NULL;
     ClusterRedis *cr = NULL;
-    if (!g_curr_cr) {
-        g_curr_cr = clients.begin()->second;
-        if (g_curr_cr == NULL) return NULL;
+    if (!curr_cr_) {
+        curr_cr_ = clients.begin()->second;
+        if (curr_cr_ == NULL) return NULL;
     }
-    ret = g_curr_cr->String_Set(key, value, expiration);
+    ret = curr_cr_->String_Set(key, value, expiration);
 
     if (ret != NULL && ret->errorno == REDIS_ERROR_MOVE) {
         map<string, ClusterRedis *>::iterator itr;
         if ((itr = clients.find(ret->ip_port)) != clients.end()) {
             cr = itr->second;
-            g_curr_cr = cr;
+            curr_cr_ = cr;
         } else {
             add_new_client(ret->ip_port);
         }
@@ -133,10 +131,10 @@ RetInfo *ClusterClient::String_Set(const char *key,
     if (ret == NULL) {
         char ip_port[32] = {0};
         snprintf(ip_port, IP_ADDR_LEN, "%s:%d",
-                 g_curr_cr->get_ip(), g_curr_cr->get_port());
+                 curr_cr_->get_ip(), curr_cr_->get_port());
         clients.erase(string(ip_port));
-        g_curr_cr->UnInit();
-        g_curr_cr = NULL;
+        curr_cr_->UnInit();
+        curr_cr_ = NULL;
         ret = String_Set(key, value, expiration);
     }
 
@@ -147,17 +145,17 @@ RetInfo *ClusterClient::String_Get(const char *key, string &value)
 {
     RetInfo *ret = NULL;
     ClusterRedis *cr = NULL;
-    if (!g_curr_cr) {
-        g_curr_cr = clients.begin()->second;
-        if (g_curr_cr == NULL) return NULL;
+    if (!curr_cr_) {
+        curr_cr_ = clients.begin()->second;
+        if (curr_cr_ == NULL) return NULL;
     }
-    ret = g_curr_cr->String_Get(key, value);
+    ret = curr_cr_->String_Get(key, value);
 
     if (ret != NULL && ret->errorno == REDIS_ERROR_MOVE) {
         map<string, ClusterRedis *>::iterator itr;
         if ((itr = clients.find(ret->ip_port)) != clients.end()) {
             cr = itr->second;
-            g_curr_cr = cr;
+            curr_cr_ = cr;
         } else {
             add_new_client(ret->ip_port);
         }
@@ -177,10 +175,10 @@ RetInfo *ClusterClient::String_Get(const char *key, string &value)
     if (ret == NULL) {
         char ip_port[32] = {0};
         snprintf(ip_port, IP_ADDR_LEN, "%s:%d",
-                 g_curr_cr->get_ip(), g_curr_cr->get_port());
+                 curr_cr_->get_ip(), curr_cr_->get_port());
         clients.erase(string(ip_port));
-        g_curr_cr->UnInit();
-        g_curr_cr = NULL;
+        curr_cr_->UnInit();
+        curr_cr_ = NULL;
         ret = String_Get(key, value);
     }
 
