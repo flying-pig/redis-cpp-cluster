@@ -11,7 +11,6 @@
 test
 cluster_test
 
-redis.conf
 *.aof
 *.rdb
 nodes.conf
