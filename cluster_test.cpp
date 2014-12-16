@@ -46,26 +46,21 @@ int main(int argc, char *argv[])
             }
         };
         string value;
-        RetInfo *ret = NULL;
+        int32_t res = 0;
         gettimeofday(&start, NULL);
-        ret = cr.String_Get(line, value);
+        res = cr.String_Get(line, value);
         gettimeofday(&end, NULL);
-        if (ret != NULL) {
+        if (res == 0) {
             time_use_msec = (end.tv_sec - start.tv_sec) * 1000 +
                             (end.tv_usec - start.tv_usec) / 1000;
-            if (ret->errorno == REDIS_ERROR_OK) {
-                //cout << "key: " << line << " = " << value << endl;
-                cout << time_use_msec << " Get key: "
-                     << line 
-                     //<< " " << value
-                     << " succeed"<< endl;
-            } else {
-                cout << time_use_msec << " Get key: "
-                     << line << " failed "
-                     << ret->errorno << endl;
-            }
+            cout << time_use_msec << " Get key: "
+                << line 
+                //<< " " << value
+                << " succeed"<< endl;
         } else {
-            cout << "wrong connection" << endl;
+            cout << time_use_msec << " Get key: "
+                << line << " failed "
+                << res << endl;
         }
     }
 

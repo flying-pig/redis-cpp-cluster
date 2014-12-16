@@ -135,7 +135,6 @@ int32_t ClusterClient::String_Set(const char *key,
 
     // the current node connection unvalide
     if (ret == NULL || ret->errorno == REDIS_ERROR_REQ) {
-        //(ret!=NULL && ret->errorno == REDIS_ERROR_REQ)) {
         char ip_port[32] = {0};
         snprintf(ip_port, IP_ADDR_LEN, "%s:%d",
                  curr_cr_->get_ip(), curr_cr_->get_port());
@@ -144,21 +143,23 @@ int32_t ClusterClient::String_Set(const char *key,
         curr_cr_ = NULL;
         res = String_Set(key, value, expiration);
     } else {
+        res = ret->errorno;
         curr_cr_->ReleaseRetInfoInstance(ret);
-        return ret->errorno;
+        return res;
     }
 
     curr_cr_->ReleaseRetInfoInstance(ret);
     return res;
 }
 
-RetInfo *ClusterClient::String_Get(const char *key, string &value)
+int32_t ClusterClient::String_Get(const char *key, string &value)
 {
     RetInfo *ret = NULL;
+    int32_t res = 0;
     ClusterRedis *cr = NULL;
     if (!curr_cr_) {
         curr_cr_ = clients.begin()->second;
-        if (curr_cr_ == NULL) return NULL;
+        if (curr_cr_ == NULL) return CLUSTER_ERR;
     }
     ret = curr_cr_->String_Get(key, value);
 
@@ -171,29 +172,40 @@ RetInfo *ClusterClient::String_Get(const char *key, string &value)
             add_new_client(ret->ip_port);
         }
 
-        if ((ret = String_Get(key, value)) == NULL) {
+        curr_cr_->ReleaseRetInfoInstance(ret);
+        if ((res = String_Get(key, value)) == CLUSTER_ERR_REQ) {
             // the MOVED master node can't connect
             // XXX:TODO connect to slave node
-            return ret;
+            return CLUSTER_ERR;
+        } else {
+            return res;
         }
     }
 
+    // cluster unvalide
     if (ret != NULL && ret->errorno == REDIS_ERROR_DOWN) {
         // just return
-        return ret;
+        curr_cr_->ReleaseRetInfoInstance(ret);
+        return CLUSTER_ERR_DOWN;
     }
 
-    if (ret == NULL) {
+    // the current node connection unvalide
+    if (ret == NULL || ret->errorno == REDIS_ERROR_REQ) {
         char ip_port[32] = {0};
         snprintf(ip_port, IP_ADDR_LEN, "%s:%d",
                  curr_cr_->get_ip(), curr_cr_->get_port());
         clients.erase(string(ip_port));
         curr_cr_->UnInit();
         curr_cr_ = NULL;
-        ret = String_Get(key, value);
+        res = String_Get(key, value);
+    } else {
+        res = ret->errorno;
+        curr_cr_->ReleaseRetInfoInstance(ret);
+        return res;
     }
 
-    return ret;
+    curr_cr_->ReleaseRetInfoInstance(ret);
+    return res;
 }
 
 int32_t ClusterClient::add_new_client(const char *ip_addr)

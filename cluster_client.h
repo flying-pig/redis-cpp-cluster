@@ -29,7 +29,7 @@ class ClusterClient {
         int32_t String_Set(const char *key,
                 const char *value,
                 int32_t expiration);
-        RetInfo *String_Get(const char *key, string &value);
+        int32_t String_Get(const char *key, string &value);
         // notify: Set and Get interface must call this release func
         void ReleaseRetInfoInstance(RetInfo *ri);
 
