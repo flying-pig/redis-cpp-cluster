@@ -40,6 +40,49 @@ int32_t ClusterClient::Init(const char *redis_master_ips)
         if (!curr_cr_) curr_cr_ = cr;
     }
 
+    redisReply *reply = curr_cr_->redis_command("cluster slots");
+    if (reply != NULL && reply->type != REDIS_REPLY_ERROR) {
+        uint32_t i = 0;
+        uint32_t j = 0;
+        uint32_t k = 0;
+        for (i = 0; i < reply->elements; ++i) {
+            ClusterSlots slots;
+            for (j = 0; j < reply->element[i]->elements; ++j) {
+                if (reply->element[i]->element[j]->type
+                    == REDIS_REPLY_INTEGER)
+                {
+                    if (j == 0)
+                        slots.set_from(reply->element[i]->element[j]->integer);
+                    if (j == 1)
+                        slots.set_to(reply->element[i]->element[j]->integer);
+
+                }
+                if (reply->element[i]->element[j]->type
+                        == REDIS_REPLY_ARRAY)
+                {
+                    pair<string, int32_t> ip_port;
+                    for (k = 0; k < reply->element[i]->element[j]->elements; ++k) {
+                        if (reply->element[i]->element[j]->element[k]->type
+                                == REDIS_REPLY_STRING)
+                        {
+                            ip_port.first =
+                                reply->element[i]->element[j]->element[k]->str;
+                        }
+                        if (reply->element[i]->element[j]->element[k]->type
+                                == REDIS_REPLY_INTEGER)
+                        {
+                            ip_port.second = reply->element[i]->element[j]
+                                             ->element[k]->integer;
+                        }
+                    }
+                    slots.add_node_info(ip_port);
+                }
+            }
+            slots_.push_back(slots);
+        }
+        freeReplyObject(reply);
+    }
+
     return 0;
 }
 
@@ -58,6 +101,16 @@ void ClusterClient::show_clients()
     map<string, ClusterRedis *>::iterator itr = clients.begin();
     for (; itr != clients.end(); ++itr) {
         logg("DEBUG", "%s, %p", itr->first.c_str(), itr->second);
+    }
+}
+
+void ClusterClient::show_slots()
+{
+    vector<ClusterSlots>::iterator itr = slots_.begin();
+    int32_t count = 0;
+    for (; itr != slots_.end(); ++itr) {
+        cout << ++count << "):" << endl;
+        itr->show_slot();
     }
 }
 

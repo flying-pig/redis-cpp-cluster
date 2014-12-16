@@ -179,6 +179,16 @@ void ClusterRedis::ReleaseRetInfoInstance(RetInfo *ri) {
 	}
 }
 
+redisReply *ClusterRedis::redis_command(const char *format, ...)
+{
+    va_list ap;
+    redisReply *reply = NULL;
+    va_start(ap, format);
+    reply = (redisReply*)redisvCommand(_redisContext, format, ap);
+    va_end(ap);
+    return reply;
+}
+
 /* < cluster op  */
 RetInfo* ClusterRedis::SendAsk() {
 	RetInfo *ri = this->GetRetInfoInstance();

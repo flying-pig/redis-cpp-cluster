@@ -1,7 +1,7 @@
 CFLAGS=-g -I. -I/usr/local/include/hiredis
 LDFLAGS=-g -L./ -lemarrediscluster -L/usr/local/lib -lhiredis
 
-objecets=Cluster_Redis.o cluster_client.o
+objecets=Cluster_Redis.o cluster_client.o cluster_slots.o
 
 lib_exe=libemarrediscluster.a test cluster_test
 

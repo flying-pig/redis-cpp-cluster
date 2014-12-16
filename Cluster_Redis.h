@@ -60,6 +60,7 @@ public:
 	RetInfo *GetRetInfoInstance();
 	void ReleaseRetInfoInstance(RetInfo *ri);
 
+	redisReply *redis_command(const char *format, ...);
 	/* < cluster op  */
 	RetInfo* SendAsk();
 	int32_t Cluster_GetSlots(deque<SlotInfo*> &slot);

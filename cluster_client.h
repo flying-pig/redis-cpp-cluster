@@ -10,6 +10,7 @@
 
 #include <vector>
 #include "Cluster_Redis.h"
+#include "cluster_slots.h"
 
 #define CLUSTER_OK          0
 #define CLUSTER_ERR        -1
@@ -26,6 +27,7 @@ class ClusterClient {
         int32_t Init(const char *redis_master_ips);
         int32_t Uninit();
         void show_clients();
+        void show_slots();
         int32_t String_Set(const char *key,
                 const char *value,
                 int32_t expiration);
@@ -37,6 +39,7 @@ class ClusterClient {
         map<string, ClusterRedis *> clients;
         std::vector<pair<string,int> > cluster_masters;
         ClusterRedis *curr_cr_;
+        vector<ClusterSlots> slots_;
 
         // ip_list format: <ip:port>;<ip:port>;...
         // 192.168.0.1:6379;192.168.0.2:6379;...

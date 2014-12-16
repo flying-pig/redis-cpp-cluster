@@ -16,6 +16,7 @@ int main(int argc, char** args)
 
     cr.Init("127.0.0.1:7010;127.0.0.1:7011;127.0.0.1:7002");
     cr.show_clients();
+    cr.show_slots();
     struct timeval start;
     struct timeval end;
     int32_t time_use_usec;
