@@ -49,6 +49,7 @@ int main(int argc, char** args)
     cout << "time use: " << time_use_usec << "usec" << endl;
     RetInfo *ret = cr.String_Get("aaaa05", value5);
     printf("aaaa5 ret info: %d, %s\n", ret->errorno, ret->ip_port);
+    cr.ReleaseRetInfoInstance(ret);
 
     cout << "aaaa01: " << value1 << "\n"
          << "aaaa02: " << value2 << "\n"

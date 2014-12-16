@@ -90,7 +90,7 @@ void ClusterClient::ip_list_unserailize(const char *ip_list)
     delete[] buf;
 }
 
-void ReleaseRetInfoInstance(RetInfo *ri)
+void ClusterClient::ReleaseRetInfoInstance(RetInfo *ri)
 {
     if (ri == NULL) return;
     g_curr_cr->ReleaseRetInfoInstance(ri);
