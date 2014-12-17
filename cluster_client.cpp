@@ -194,7 +194,7 @@ int32_t ClusterClient::String_Get(const char *key, string &value)
             cr = itr->second;
             curr_cr_ = cr;
         } else {
-            if (add_new_client(ret->ip_port)) {
+            if (add_new_client(ret->ip_port) < 0) {
                 curr_cr_->ReleaseRetInfoInstance(ret);
                 return CLUSTER_ERR;
             }
