@@ -143,6 +143,7 @@ int32_t ClusterClient::String_Set(const char *key,
             curr_cr_->ReleaseRetInfoInstance(ret);
             return CLUSTER_ERR_REQ;
         } else {
+            res = ret->errorno;
             curr_cr_->ReleaseRetInfoInstance(ret);
             return res;
         }
@@ -208,6 +209,7 @@ int32_t ClusterClient::String_Get(const char *key, string &value)
             curr_cr_->ReleaseRetInfoInstance(ret);
             return CLUSTER_ERR_REQ;
         } else {
+            res = ret->errorno;
             curr_cr_->ReleaseRetInfoInstance(ret);
             return res;
         }
