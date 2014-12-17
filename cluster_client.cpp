@@ -66,7 +66,8 @@ void ClusterClient::ip_list_unserailize(const char *ip_list)
     if (NULL == ip_list) return;
     char *buf = new char[1024 * 1024];
     strcpy(buf, ip_list);
-    char *tokenPtr = std::strtok(buf, REDIS_IP_SPLIT_CHAR);
+    char *saveptr;
+    char *tokenPtr = strtok_r(buf, REDIS_IP_SPLIT_CHAR, &saveptr);
     char *tmpPtr = NULL;
     char ip_buff[32 + 1];
     int32_t port = 0;
@@ -82,7 +83,7 @@ void ClusterClient::ip_list_unserailize(const char *ip_list)
         tmpPair.first = string(ip_buff);
         tmpPair.second = port;
         cluster_masters.push_back(tmpPair);
-        tokenPtr = strtok(NULL, REDIS_IP_SPLIT_CHAR);
+        tokenPtr = strtok_r(NULL, REDIS_IP_SPLIT_CHAR, &saveptr);
     }
 
     delete[] buf;
@@ -102,8 +103,9 @@ int32_t ClusterClient::String_Set(const char *key,
     int32_t res = 0;
     ClusterRedis *cr = NULL;
     if (!curr_cr_) {
+        if (clients.empty()) return CLUSTER_ERR;
         curr_cr_ = clients.begin()->second;
-        if (curr_cr_ == NULL) return CLUSTER_ERR;
+        if (clients.empty() || curr_cr_ == NULL) return CLUSTER_ERR;
     }
     ret = curr_cr_->String_Set(key, value, expiration);
 
@@ -158,8 +160,9 @@ int32_t ClusterClient::String_Get(const char *key, string &value)
     int32_t res = 0;
     ClusterRedis *cr = NULL;
     if (!curr_cr_) {
+        if (clients.empty()) return CLUSTER_ERR;
         curr_cr_ = clients.begin()->second;
-        if (curr_cr_ == NULL) return CLUSTER_ERR;
+        if (clients.empty() || curr_cr_ == NULL) return CLUSTER_ERR;
     }
     ret = curr_cr_->String_Get(key, value);
 
