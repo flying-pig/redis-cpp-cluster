@@ -17,14 +17,16 @@ using std::pair;
 
 class RedisNodeGroup {
     public:
-        explicit RedisNodeGroup() {};
+        explicit RedisNodeGroup() { seed_ = time(NULL); };
         ~RedisNodeGroup(){};
         void set_master(ClusterRedis *cr);
         void add_node(ClusterRedis *cr);
         void show_nodes();
+        ClusterRedis *get_client(bool is_write);
     private:
         vector<ClusterRedis *> nodes_;
         ClusterRedis *master_;
+        unsigned int seed_;
 };
 
 class ClusterSlots {
@@ -35,8 +37,13 @@ class ClusterSlots {
         void add_node_info(pair<string, int32_t> ip_port);
         void show_slot();
         inline void set_from(int32_t from) { from_ = from; };
+        inline int32_t get_from() { return from_; }
         inline void set_to(int32_t to) { to_ = to; };
+        inline int32_t get_to() { return to_; }
         inline void add_node(ClusterRedis *cr, bool flag);
+        inline ClusterRedis *get_client(bool is_write) {
+            return node_group_.get_client(is_write);
+        }
 
         vector<pair<string, int32_t> > ip_ports_;
 

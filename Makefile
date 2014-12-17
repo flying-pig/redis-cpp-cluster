@@ -1,7 +1,7 @@
 CFLAGS=-g -I. -I/usr/local/include/hiredis
 LDFLAGS=-g -L./ -lemarrediscluster -L/usr/local/lib -lhiredis
 
-objecets=Cluster_Redis.o cluster_client.o cluster_slots.o
+objecets=Cluster_Redis.o cluster_client.o cluster_slots.o crc16.o
 
 lib_exe=libemarrediscluster.a test cluster_test
 
@@ -22,6 +22,9 @@ cluster_test: cluster_test.o
 
 %.o: %.cpp
 	g++ -c $^ $(CFLAGS)
+
+%.c: %.c
+	gcc -c $^ $(CFLAGS)
 
 clean:
 	rm *.o -f $(lib_exe)

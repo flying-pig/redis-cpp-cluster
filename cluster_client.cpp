@@ -11,6 +11,7 @@
 #include <cstring>
 #include <cstdlib>
 #include "cluster_client.h"
+#include "crc16.h"
 #include "log.h"
 
 #define REDIS_IP_SPLIT_CHAR  ";"
@@ -117,6 +118,7 @@ int32_t ClusterClient::Uninit()
         logg("DEBUG", "%s, %p", itr->first.c_str(), itr->second);
         itr->second->UnInit();
     }
+    // XXX TODO: free memory of slots_ client
     return 0;
 }
 
@@ -136,6 +138,26 @@ void ClusterClient::show_slots()
         cout << ++count << "):" << endl;
         itr->show_slot();
     }
+}
+
+ClusterRedis *ClusterClient::get_slots_client(const char *key, bool is_write)
+{
+    ClusterRedis *client = NULL;
+    if (key == NULL) return NULL;
+    int32_t slot_id = keyHashSlot(key, (int)strlen(key));
+
+    vector<ClusterSlots>::iterator itr = slots_.begin(); 
+    for (; itr != slots_.end(); ++itr) {
+        if (slot_id <= itr->get_to() && slot_id >= itr->get_from()) {
+            break;
+        }
+    }
+
+    if (itr != slots_.end()) {
+        client = itr->get_client(is_write);
+    }
+
+    return client;
 }
 
 void ClusterClient::ip_list_unserailize(const char *ip_list)

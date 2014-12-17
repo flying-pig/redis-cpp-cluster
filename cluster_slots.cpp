@@ -4,6 +4,7 @@
  */
 
 #include <iostream>
+#include <cstdlib>
 
 #include "cluster_slots.h"
 using std::cout;
@@ -30,6 +31,15 @@ void RedisNodeGroup::show_nodes()
     for (; itr != nodes_.end(); ++itr) {
         cout << (*itr)->get_ip() << ":" << (*itr)->get_port() << endl;
     }
+}
+
+ClusterRedis *RedisNodeGroup::get_client(bool is_write)
+{
+    if (is_write)
+        return master_;
+
+    int32_t num = rand_r(&seed_) % nodes_.size();
+    return nodes_[num];
 }
 
 

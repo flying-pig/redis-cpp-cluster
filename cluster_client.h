@@ -35,6 +35,7 @@ class ClusterClient {
         int32_t String_Get(const char *key, string &value);
         // notify: Set and Get interface must call this release func
         void ReleaseRetInfoInstance(RetInfo *ri);
+        ClusterRedis *get_slots_client(const char *key, bool is_write);
 
     private:
         map<string, ClusterRedis *> clients;
