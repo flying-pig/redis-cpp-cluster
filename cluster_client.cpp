@@ -40,6 +40,11 @@ int32_t ClusterClient::Init(const char *redis_master_ips)
         if (!curr_cr_) curr_cr_ = cr;
     }
 
+    if (curr_cr_ == NULL) {
+        logg("ERROR", "Init master nodes failed! Can't connect to none");
+        return -1;
+    }
+
     redisReply *reply = curr_cr_->redis_command("cluster slots");
     if (reply != NULL && reply->type != REDIS_REPLY_ERROR) {
         uint32_t i = 0;
@@ -86,6 +91,25 @@ int32_t ClusterClient::Init(const char *redis_master_ips)
     return 0;
 }
 
+bool ClusterClient::startup()
+{
+    vector<ClusterSlots>::iterator itr = slots_.begin();
+    for (; itr != slots_.end(); ++itr) {
+        vector<pair<string, int32_t> >::iterator itr2 =itr->ip_ports_.begin();
+        bool is_master = true;
+        for (; itr2 != itr->ip_ports_.end(); ++itr2) {
+            ClusterRedis *cr = new ClusterRedis;
+            if (cr->Init(itr2->first.c_str(), itr2->second)) {
+                if (is_master) is_master = false;
+                continue;
+            }
+            itr->add_node(cr, is_master);
+            is_master = false;
+        }
+    }
+    return true;
+}
+
 int32_t ClusterClient::Uninit()
 {
     map<string, ClusterRedis *>::iterator itr = clients.begin();
@@ -119,7 +143,8 @@ void ClusterClient::ip_list_unserailize(const char *ip_list)
     if (NULL == ip_list) return;
     char *buf = new char[1024 * 1024];
     strcpy(buf, ip_list);
-    char *tokenPtr = std::strtok(buf, REDIS_IP_SPLIT_CHAR);
+    char *saveptr;
+    char *tokenPtr = strtok_r(buf, REDIS_IP_SPLIT_CHAR, &saveptr);
     char *tmpPtr = NULL;
     char ip_buff[32 + 1];
     int32_t port = 0;
@@ -135,7 +160,7 @@ void ClusterClient::ip_list_unserailize(const char *ip_list)
         tmpPair.first = string(ip_buff);
         tmpPair.second = port;
         cluster_masters.push_back(tmpPair);
-        tokenPtr = strtok(NULL, REDIS_IP_SPLIT_CHAR);
+        tokenPtr = strtok_r(NULL, REDIS_IP_SPLIT_CHAR, &saveptr);
     }
 
     delete[] buf;
@@ -155,8 +180,12 @@ int32_t ClusterClient::String_Set(const char *key,
     int32_t res = 0;
     ClusterRedis *cr = NULL;
     if (!curr_cr_) {
+        if (clients.empty()) return CLUSTER_ERR;
         curr_cr_ = clients.begin()->second;
-        if (curr_cr_ == NULL) return CLUSTER_ERR;
+        if (clients.empty() || curr_cr_ == NULL) {
+            cout << "no current client" << endl;
+            return CLUSTER_ERR;
+        }
     }
     ret = curr_cr_->String_Set(key, value, expiration);
 
@@ -211,8 +240,9 @@ int32_t ClusterClient::String_Get(const char *key, string &value)
     int32_t res = 0;
     ClusterRedis *cr = NULL;
     if (!curr_cr_) {
+        if (clients.empty()) return CLUSTER_ERR;
         curr_cr_ = clients.begin()->second;
-        if (curr_cr_ == NULL) return CLUSTER_ERR;
+        if (clients.empty() || curr_cr_ == NULL) return CLUSTER_ERR;
     }
     ret = curr_cr_->String_Get(key, value);
 

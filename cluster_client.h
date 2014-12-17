@@ -28,6 +28,7 @@ class ClusterClient {
         int32_t Uninit();
         void show_clients();
         void show_slots();
+        bool startup();
         int32_t String_Set(const char *key,
                 const char *value,
                 int32_t expiration);

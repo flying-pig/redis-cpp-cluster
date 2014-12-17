@@ -15,7 +15,9 @@ int main(int argc, char** args)
     ClusterClient cr;
 
     cr.Init("127.0.0.1:7010;127.0.0.1:7011;127.0.0.1:7002");
+    //cr.Init("192.168.5.209:30005;192.168.5.209:36005;192.168.5.213:30004;192.168.5.213:30005;192.168.5.209:30004;192.168.5.216:30005");
     cr.show_clients();
+    cr.startup();
     cr.show_slots();
     struct timeval start;
     struct timeval end;
@@ -25,12 +27,12 @@ int main(int argc, char** args)
     int res = cr.String_Set("aaaa01", "10000000000", 300);
     gettimeofday(&end, NULL);
 
+    //std::exit(2);
     time_use_usec = (end.tv_sec - start.tv_sec) * 1000000 + (end.tv_usec - start.tv_usec);
     cout << "return value : " << res << endl;
     cout << "time use: " << time_use_usec << "usec" << endl;
     time_use_msec = (end.tv_sec - start.tv_sec) * 1000 + (end.tv_usec - start.tv_usec) / 1000;
     cout << "time use: " << time_use_msec << "msec" << endl;
-    //std::exit(2);
     cr.String_Set("aaaa02", "20000000000", 300);
     cr.String_Set("aaaa03", "30000000000", 300);
     cr.String_Set("aaaa04", "40000000000", 300);

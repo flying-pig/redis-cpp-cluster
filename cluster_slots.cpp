@@ -19,6 +19,19 @@ void RedisNodeGroup::add_node(ClusterRedis *cr)
     nodes_.push_back(cr);
 }
 
+void RedisNodeGroup::show_nodes()
+{
+    cout << "master: " << master_->get_ip()
+         << ":" << master_->get_port()
+         << endl;
+
+    cout << "all nodes: " << endl;
+    vector<ClusterRedis *>::iterator itr = nodes_.begin();
+    for (; itr != nodes_.end(); ++itr) {
+        cout << (*itr)->get_ip() << ":" << (*itr)->get_port() << endl;
+    }
+}
+
 
 // Begin of class ClusterSlots
 ClusterSlots::ClusterSlots(int32_t from, int32_t to)
@@ -39,4 +52,5 @@ void ClusterSlots::show_slot()
     for (itr = ip_ports_.begin(); itr != ip_ports_.end(); ++itr) {
         cout <<"\t node: " << itr->first << ":" << itr->second << endl;
     }
+    node_group_.show_nodes();
 }

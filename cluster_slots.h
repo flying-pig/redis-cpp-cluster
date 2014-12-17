@@ -21,6 +21,7 @@ class RedisNodeGroup {
         ~RedisNodeGroup(){};
         void set_master(ClusterRedis *cr);
         void add_node(ClusterRedis *cr);
+        void show_nodes();
     private:
         vector<ClusterRedis *> nodes_;
         ClusterRedis *master_;
@@ -35,12 +36,21 @@ class ClusterSlots {
         void show_slot();
         inline void set_from(int32_t from) { from_ = from; };
         inline void set_to(int32_t to) { to_ = to; };
+        inline void add_node(ClusterRedis *cr, bool flag);
+
+        vector<pair<string, int32_t> > ip_ports_;
+
     private:
         RedisNodeGroup node_group_;
         int32_t from_;
         int32_t to_;
-        vector<pair<string, int32_t> > ip_ports_;
 };
+
+inline void ClusterSlots::add_node(ClusterRedis *cr, bool flag)
+{
+    node_group_.add_node(cr);
+    if (flag) node_group_.set_master(cr);
+}
 
 
 
