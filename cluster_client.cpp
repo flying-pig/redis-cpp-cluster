@@ -46,6 +46,7 @@ int32_t ClusterClient::Init(const char *redis_master_ips)
                     ret.first->first.c_str(), ret.first->second);
             cr->UnInit();
             delete cr;
+            continue;
         }
 
         if (!curr_cr_) curr_cr_ = cr;
@@ -60,6 +61,8 @@ int32_t ClusterClient::Uninit()
     for (; itr != clients.end(); ++itr) {
         logg("DEBUG", "%s, %p", itr->first.c_str(), itr->second);
         itr->second->UnInit();
+
+        delete itr->second;
     }
     return 0;
 }
@@ -126,15 +129,21 @@ int32_t ClusterClient::String_Set(const char *key,
             cr = itr->second;
             curr_cr_ = cr;
         } else {
-            add_new_client(ret->ip_port);
+            if (add_new_client(ret->ip_port) < 0) {
+                curr_cr_->ReleaseRetInfoInstance(ret);
+                return CLUSTER_ERR;
+            }
         }
 
         curr_cr_->ReleaseRetInfoInstance(ret);
-        if ((res = String_Set(key, value, expiration)) == CLUSTER_ERR_REQ) {
+        ret = curr_cr_->String_Set(key, value, expiration);
+        if (ret == NULL || ret->errorno == REDIS_ERROR_REQ) {
             // the MOVED master node can't connect
             // XXX:TODO connect to slave node
-            return CLUSTER_ERR;
+            curr_cr_->ReleaseRetInfoInstance(ret);
+            return CLUSTER_ERR_REQ;
         } else {
+            curr_cr_->ReleaseRetInfoInstance(ret);
             return res;
         }
     }
@@ -152,6 +161,7 @@ int32_t ClusterClient::String_Set(const char *key,
         snprintf(ip_port, IP_ADDR_LEN, "%s:%d",
                  curr_cr_->get_ip(), curr_cr_->get_port());
         clients.erase(string(ip_port));
+        curr_cr_->ReleaseRetInfoInstance(ret);
         curr_cr_->UnInit();
         curr_cr_ = NULL;
         res = String_Set(key, value, expiration);
@@ -184,15 +194,21 @@ int32_t ClusterClient::String_Get(const char *key, string &value)
             cr = itr->second;
             curr_cr_ = cr;
         } else {
-            add_new_client(ret->ip_port);
+            if (add_new_client(ret->ip_port)) {
+                curr_cr_->ReleaseRetInfoInstance(ret);
+                return CLUSTER_ERR;
+            }
         }
 
         curr_cr_->ReleaseRetInfoInstance(ret);
-        if ((res = String_Get(key, value)) == CLUSTER_ERR_REQ) {
+        ret = curr_cr_->String_Get(key, value);
+        if (ret == NULL || ret->errorno == REDIS_ERROR_REQ) {
             // the MOVED master node can't connect
             // XXX:TODO connect to slave node
-            return CLUSTER_ERR;
+            curr_cr_->ReleaseRetInfoInstance(ret);
+            return CLUSTER_ERR_REQ;
         } else {
+            curr_cr_->ReleaseRetInfoInstance(ret);
             return res;
         }
     }
@@ -210,9 +226,11 @@ int32_t ClusterClient::String_Get(const char *key, string &value)
         snprintf(ip_port, IP_ADDR_LEN, "%s:%d",
                  curr_cr_->get_ip(), curr_cr_->get_port());
         clients.erase(string(ip_port));
+        curr_cr_->ReleaseRetInfoInstance(ret);
         curr_cr_->UnInit();
         curr_cr_ = NULL;
         res = String_Get(key, value);
+        return res;
     } else {
         res = ret->errorno;
         curr_cr_->ReleaseRetInfoInstance(ret);
@@ -243,7 +261,6 @@ int32_t ClusterClient::add_new_client(const char *ip_addr)
         pair<map<string, ClusterRedis *>::iterator, bool> ret;
         ret = clients.insert(pair<string,
                        ClusterRedis *>(string(ip_addr), cr));
-        curr_cr_ = cr;
         if (ret.second == false) {
             logg("ERROR", "insert <%s, %p> failed, already existed!",
                  ret.first->first.c_str(), ret.first->second);
@@ -251,7 +268,10 @@ int32_t ClusterClient::add_new_client(const char *ip_addr)
             delete cr;
             return CLUSTER_ERR;
         }
+        curr_cr_ = cr;
+
+        return CLUSTER_OK;
     }
 
-    return CLUSTER_OK;
+    return CLUSTER_ERR;
 }
