@@ -174,6 +174,25 @@ ClusterRedis *ClusterClient::get_slots_client(const char *key, bool is_write)
     return client;
 }
 
+ClusterRedis *ClusterClient::get_slots_client(const int32_t slot_id,
+                                              bool is_write)
+{
+    ClusterRedis *client = NULL;
+
+    vector<ClusterSlots>::iterator itr = slots_.begin(); 
+    for (; itr != slots_.end(); ++itr) {
+        if (slot_id <= itr->get_to() && slot_id >= itr->get_from()) {
+            break;
+        }
+    }
+
+    if (itr != slots_.end()) {
+        client = itr->get_client(is_write);
+    }
+
+    return client;
+}
+
 void ClusterClient::ip_list_unserailize(const char *ip_list)
 {
     if (NULL == ip_list) return;
