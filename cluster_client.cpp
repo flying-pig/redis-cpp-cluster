@@ -35,8 +35,18 @@ int32_t ClusterClient::Init(const char *redis_master_ips)
         snprintf(addr, IP_ADDR_LEN, "%s:%d", itr->first.c_str(), itr->second);
 
         ClusterRedis *cr = new ClusterRedis;
-        if (cr->Init(itr->first.c_str(), itr->second) < 0) continue;
-        clients.insert(pair<string, ClusterRedis *>(string(addr), cr));
+        if (cr->Init(itr->first.c_str(), itr->second) < 0) { 
+            delete cr;
+            continue;
+        }
+        pair<map<string, ClusterRedis *>::iterator, bool> ret;
+        ret = clients.insert(pair<string, ClusterRedis *>(string(addr), cr));
+        if (ret.second == false) {
+            logg("ERROR", "insert <%s, %p> failed, already existed!",
+                 ret.first->first.c_str(), ret.first->second);
+            delete cr;
+            return CLUSTER_ERR;
+        }
 
         if (!curr_cr_) curr_cr_ = cr;
     }
@@ -325,7 +335,10 @@ int32_t ClusterClient::add_new_client(const char *ip_addr)
         port = std::atoi(ptr + 1);
 
         ClusterRedis *cr = new ClusterRedis;
-        cr->Init(ip_buf, port);
+        if (cr->Init(ip_buf, port)) {
+            delete cr;
+            return CLUSTER_ERR;
+        }
         pair<map<string, ClusterRedis *>::iterator, bool> ret;
         ret = clients.insert(pair<string,
                        ClusterRedis *>(string(ip_addr), cr));
@@ -333,6 +346,7 @@ int32_t ClusterClient::add_new_client(const char *ip_addr)
         if (ret.second == false) {
             logg("ERROR", "insert <%s, %p> failed, already existed!",
                  ret.first->first.c_str(), ret.first->second);
+            delete cr;
             return CLUSTER_ERR;
         }
     }
