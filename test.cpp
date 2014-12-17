@@ -61,4 +61,5 @@ int main(int argc, char** args)
          << "aaaa03: " << value3 << "\n"
          << "aaaa04: " << value4 << "\n"
          << "aaaa05: " << value5 << endl;
+    cr.Uninit();
 }
