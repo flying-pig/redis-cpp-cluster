@@ -34,8 +34,19 @@ int32_t ClusterClient::Init(const char *redis_master_ips)
         snprintf(addr, IP_ADDR_LEN, "%s:%d", itr->first.c_str(), itr->second);
 
         ClusterRedis *cr = new ClusterRedis;
-        if (cr->Init(itr->first.c_str(), itr->second) < 0) continue;
-        clients.insert(pair<string, ClusterRedis *>(string(addr), cr));
+        if (cr->Init(itr->first.c_str(), itr->second) < 0) {
+            cr->UnInit();
+            delete cr;
+            continue;
+        }
+        pair<map<string, ClusterRedis *>::iterator, bool> ret;
+        ret = clients.insert(pair<string, ClusterRedis *>(string(addr), cr));
+        if (ret.second == false) {
+            logg("ERROR", "insert <%s, %p> failed, already existed!",
+                    ret.first->first.c_str(), ret.first->second);
+            cr->UnInit();
+            delete cr;
+        }
 
         if (!curr_cr_) curr_cr_ = cr;
     }
@@ -144,6 +155,7 @@ int32_t ClusterClient::String_Set(const char *key,
         curr_cr_->UnInit();
         curr_cr_ = NULL;
         res = String_Set(key, value, expiration);
+        return res;
     } else {
         res = ret->errorno;
         curr_cr_->ReleaseRetInfoInstance(ret);
@@ -223,7 +235,11 @@ int32_t ClusterClient::add_new_client(const char *ip_addr)
         port = std::atoi(ptr + 1);
 
         ClusterRedis *cr = new ClusterRedis;
-        cr->Init(ip_buf, port);
+        if (cr->Init(ip_buf, port)) {
+            cr->UnInit();
+            delete cr;
+            return CLUSTER_ERR;
+        }
         pair<map<string, ClusterRedis *>::iterator, bool> ret;
         ret = clients.insert(pair<string,
                        ClusterRedis *>(string(ip_addr), cr));
@@ -231,6 +247,8 @@ int32_t ClusterClient::add_new_client(const char *ip_addr)
         if (ret.second == false) {
             logg("ERROR", "insert <%s, %p> failed, already existed!",
                  ret.first->first.c_str(), ret.first->second);
+            cr->UnInit();
+            delete cr;
             return CLUSTER_ERR;
         }
     }
