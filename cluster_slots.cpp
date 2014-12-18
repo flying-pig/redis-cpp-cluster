@@ -51,6 +51,17 @@ ClusterRedis *RedisNodeGroup::get_client(CLUSTER_NODE_TYPE type)
     return nodes_[num];
 }
 
+void RedisNodeGroup::free_clients()
+{
+    vector<ClusterRedis *>::iterator itr = nodes_.begin();
+    for (; itr != nodes_.end(); ++itr) {
+        cout << (*itr)->get_ip() << ":" << (*itr)->get_port() << endl;
+        (*itr)->UnInit();
+        delete *itr;
+    }
+    nodes_.clear();
+}
+
 
 // Begin of class ClusterSlots
 ClusterSlots::ClusterSlots(int32_t from, int32_t to)

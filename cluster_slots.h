@@ -28,6 +28,7 @@ class RedisNodeGroup {
         void set_master(ClusterRedis *cr);
         void add_node(ClusterRedis *cr);
         void show_nodes();
+        void free_clients();
         ClusterRedis *get_client(CLUSTER_NODE_TYPE type);
         inline int32_t get_nodes_count() { return nodes_.size(); }
     private:
@@ -49,6 +50,7 @@ class ClusterSlots {
         inline void set_to(int32_t to) { to_ = to; };
         inline int32_t get_to() { return to_; }
         inline void add_node(ClusterRedis *cr, bool flag);
+        inline void free_clients();
         inline ClusterRedis *get_client(CLUSTER_NODE_TYPE type) {
             return node_group_.get_client(type);
         }
@@ -66,6 +68,11 @@ inline void ClusterSlots::add_node(ClusterRedis *cr, bool flag)
 {
     node_group_.add_node(cr);
     if (flag) node_group_.set_master(cr);
+}
+
+inline void ClusterSlots::free_clients()
+{
+    node_group_.free_clients();
 }
 
 

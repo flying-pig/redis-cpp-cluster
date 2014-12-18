@@ -132,7 +132,14 @@ int32_t ClusterClient::Uninit()
 
         delete itr->second;
     }
-    // XXX TODO: free memory of slots_ client
+    // free memory of slots_ client
+    vector<ClusterSlots>::iterator itr2 = slots_.begin();
+    for (; itr2 != slots_.end(); ++itr2) {
+        logg("DEBUG", "free slots' clients, from: %d, to: %d",
+                      itr2->get_from(), itr2->get_to());
+        itr2->free_clients();
+    }
+    slots_.clear();
     return 0;
 }
 
@@ -341,6 +348,7 @@ redisReply *ClusterClient::redis_command(int32_t slot_id,
         }
     }
     va_end(ap);
+    curr_cr_->ReleaseRetInfoInstance(ri);
     return reply;
 }
 
