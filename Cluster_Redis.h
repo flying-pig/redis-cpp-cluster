@@ -61,6 +61,7 @@ public:
 	void ReleaseRetInfoInstance(RetInfo *ri);
 
 	redisReply *redis_command(const char *format, ...);
+	redisReply *redis_vCommand(const char *format, va_list ap);
 	/* < cluster op  */
 	RetInfo* SendAsk();
 	int32_t Cluster_GetSlots(deque<SlotInfo*> &slot);

@@ -9,6 +9,7 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <cstdio>
 
 ClusterRedis::ClusterRedis():_redisIP(NULL), _redisPort(0),
 _redisContext(NULL), _redisReply(NULL) {
@@ -181,11 +182,36 @@ void ClusterRedis::ReleaseRetInfoInstance(RetInfo *ri) {
 
 redisReply *ClusterRedis::redis_command(const char *format, ...)
 {
+    if (format == NULL || *format == '\0') return NULL;
     va_list ap;
     redisReply *reply = NULL;
     va_start(ap, format);
-    reply = (redisReply*)redisvCommand(_redisContext, format, ap);
+    reply = (redisReply*)redis_vCommand(format, ap);
     va_end(ap);
+    return reply;
+}
+
+redisReply *ClusterRedis::redis_vCommand(const char *format, va_list ap)
+{
+    if (format == NULL || *format == '\0') return NULL;
+
+    if (this->StatusCheck()) {
+	return NULL;
+    }
+    redisReply *reply = NULL;
+    reply = (redisReply *)redisvCommand(_redisContext, format, ap);
+    if (!reply || reply->type == REDIS_REPLY_ERROR) {
+	if (reply) {
+	    char buf[1024] = {0};
+	    vsnprintf(buf, 1024, format, ap);
+	    logg("ERROR", "%s", buf);
+	}
+	FreeSources();
+	if (ReConnect() < 0) return NULL;
+	reply = (redisReply *)redisvCommand(_redisContext, format, ap);
+	return reply;
+    }
+
     return reply;
 }
 

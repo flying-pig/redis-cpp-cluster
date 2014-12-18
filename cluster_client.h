@@ -29,20 +29,24 @@ class ClusterClient {
         void show_clients();
         void show_slots();
         bool startup();
+        redisReply *redis_command(int32_t slot_id, const char *format, ...);
         int32_t String_Set(const char *key,
                 const char *value,
                 int32_t expiration);
         int32_t String_Get(const char *key, string &value);
         // notify: Set and Get interface must call this release func
         void ReleaseRetInfoInstance(RetInfo *ri);
-        ClusterRedis *get_slots_client(const char *key, bool is_write);
-        ClusterRedis *get_slots_client(const int32_t slot_id, bool is_write);
+        ClusterRedis *get_slots_client(const char *key, CLUSTER_NODE_TYPE type);
+        ClusterRedis *get_slots_client(const int32_t slot_id, CLUSTER_NODE_TYPE type);
+        int32_t get_slots_nodes_count(const char *key);
+        int32_t get_slots_nodes_count(const int32_t slot_id);
 
     private:
         map<string, ClusterRedis *> clients;
         std::vector<pair<string,int> > cluster_masters;
         ClusterRedis *curr_cr_;
         vector<ClusterSlots> slots_;
+        bool rehashed_;
 
         // ip_list format: <ip:port>;<ip:port>;...
         // 192.168.0.1:6379;192.168.0.2:6379;...

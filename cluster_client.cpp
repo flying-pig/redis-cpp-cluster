@@ -154,7 +154,42 @@ void ClusterClient::show_slots()
     }
 }
 
-ClusterRedis *ClusterClient::get_slots_client(const char *key, bool is_write)
+int32_t ClusterClient::get_slots_nodes_count(const char *key)
+{
+    if (!key || *key == '\0')
+        return 0;
+    return 0;
+
+    int32_t slot_id = keyHashSlot(key, (int)strlen(key));
+
+    vector<ClusterSlots>::iterator itr = slots_.begin(); 
+    for (; itr != slots_.end(); ++itr) {
+        if (slot_id <= itr->get_to() && slot_id >= itr->get_from()) {
+            break;
+        }
+    }
+    
+    if (itr != slots_.end()) return 0;
+
+    return itr->get_nodes_count();
+}
+
+int32_t ClusterClient::get_slots_nodes_count(const int32_t slot_id)
+{
+    vector<ClusterSlots>::iterator itr = slots_.begin(); 
+    for (; itr != slots_.end(); ++itr) {
+        if (slot_id <= itr->get_to() && slot_id >= itr->get_from()) {
+            break;
+        }
+    }
+    
+    if (itr != slots_.end()) return 0;
+
+    return itr->get_nodes_count();
+}
+
+ClusterRedis *ClusterClient::get_slots_client(const char *key,
+                                              CLUSTER_NODE_TYPE type)
 {
     ClusterRedis *client = NULL;
     if (key == NULL) return NULL;
@@ -168,14 +203,14 @@ ClusterRedis *ClusterClient::get_slots_client(const char *key, bool is_write)
     }
 
     if (itr != slots_.end()) {
-        client = itr->get_client(is_write);
+        client = itr->get_client(type);
     }
 
     return client;
 }
 
 ClusterRedis *ClusterClient::get_slots_client(const int32_t slot_id,
-                                              bool is_write)
+                                              CLUSTER_NODE_TYPE type)
 {
     ClusterRedis *client = NULL;
 
@@ -187,7 +222,7 @@ ClusterRedis *ClusterClient::get_slots_client(const int32_t slot_id,
     }
 
     if (itr != slots_.end()) {
-        client = itr->get_client(is_write);
+        client = itr->get_client(type);
     }
 
     return client;
@@ -227,6 +262,135 @@ void ClusterClient::ReleaseRetInfoInstance(RetInfo *ri)
     curr_cr_->ReleaseRetInfoInstance(ri);
 }
 
+redisReply *ClusterClient::redis_command(int32_t slot_id,
+                                         const char *format, ...)
+{
+    if (format == NULL || *format == '\0') return NULL;
+
+    // get master first
+    curr_cr_ = get_slots_client(slot_id, CLUSTER_NODE_MASTER);
+    if (curr_cr_ == NULL)
+        return NULL;
+    RetInfo *ri = curr_cr_->GetRetInfoInstance();
+    if (ri == NULL) return NULL;
+
+    va_list ap;
+    redisReply *reply = NULL;
+    va_start(ap, format);
+    reply = (redisReply *)curr_cr_->redis_vCommand(format, ap);
+    if (reply == NULL && reply->type == REDIS_REPLY_ERROR) {
+        if (reply) {
+            if (!curr_cr_->ErrorInfoCheck(reply->str, ri)) {
+                if (ri->errorno == REDIS_ERROR_MOVE) {
+                    // slots have rehashed or moved
+                    // first, turn to the moved node, and exec the command
+                    // then, need update the slots info
+
+                    // set the rehashed_ flag;
+                    rehashed_ = true;
+                    map<string, ClusterRedis *>::iterator itr;
+                    if ((itr = clients.find(ri->ip_port)) != clients.end()) {
+                        curr_cr_ = itr->second;
+                    } else {
+                        if (add_new_client(ri->ip_port) < 0) {
+                            curr_cr_->ReleaseRetInfoInstance(ri);
+                            freeReplyObject(reply);
+                            va_end(ap);
+                            return NULL;
+                        }
+                    }
+
+                    // execute the command
+                    curr_cr_->ReleaseRetInfoInstance(ri);
+                    freeReplyObject(reply);
+                    reply = curr_cr_->redis_vCommand(format, ap);
+                    if (reply == NULL) {
+                        // the MOVED master node can't connect
+                        // connect to slave node and execute command
+                        int32_t slave_count = get_slots_nodes_count(slot_id);
+                        // substract master
+                        --slave_count;
+                        do {
+                            curr_cr_ = get_slots_client(slot_id,
+                                                        CLUSTER_NODE_SLAVE);
+                            if (!curr_cr_)
+                                break;
+                            reply = curr_cr_->redis_vCommand(format, ap);
+                            --slave_count;
+
+                        } while (reply == NULL || slave_count-- > 0);
+
+                        va_end(ap);
+                        return reply;
+                    } else {
+                        va_end(ap);
+                        return reply;
+                    }
+                }
+
+                curr_cr_->FreeSources();
+                curr_cr_->ReleaseRetInfoInstance(ri);
+                freeReplyObject(reply);
+                va_end(ap);
+                return NULL;
+            }
+            char buf[1024] = {0};
+            vsnprintf(buf, 1024, format, ap);
+            logg("ERROR", "failed command: %s", buf);
+            freeReplyObject(reply);
+        }
+    }
+    va_end(ap);
+    return reply;
+}
+
+int32_t ClusterClient::String_Set(const char *key,
+                                   const char *value,
+                                   int32_t expiration)
+{
+    redisReply *reply = NULL;
+    if (!key || !value)
+        return CLUSTER_ERR;
+
+    int32_t slot_id = keyHashSlot(key, (int)strlen(key));
+
+    if (expiration > 0) {
+		reply = (redisReply*)redis_command(slot_id, "SET %s %s ex %d",
+                                           key, value, expiration);
+	} else {
+		reply = (redisReply*)redis_command(slot_id, "SET %s %s", key, value);
+    }
+
+    if (reply && reply->type == REDIS_ERROR_STATUS &&
+            !strcmp(reply->str, "OK")) {
+        freeReplyObject(reply);
+        return CLUSTER_OK;
+
+    }
+
+    if(reply) freeReplyObject(reply);
+    return CLUSTER_ERR;
+}
+
+int32_t ClusterClient::String_Get(const char *key, string &value)
+{
+    redisReply *reply = NULL;
+    if (!key)
+        return CLUSTER_ERR;
+
+    int32_t slot_id = keyHashSlot(key, (int)strlen(key));
+    reply = (redisReply*)redis_command(slot_id, "Get %s", key);
+    if (reply && reply->type == REDIS_REPLY_STRING) {
+        value = reply->str;
+        freeReplyObject(reply);
+        return CLUSTER_OK;
+    }
+
+    if(reply) freeReplyObject(reply);
+    return CLUSTER_ERR;
+}
+
+#if 0
 int32_t ClusterClient::String_Set(const char *key,
                                    const char *value,
                                    int32_t expiration)
@@ -361,6 +525,7 @@ int32_t ClusterClient::String_Get(const char *key, string &value)
     curr_cr_->ReleaseRetInfoInstance(ret);
     return res;
 }
+#endif
 
 int32_t ClusterClient::add_new_client(const char *ip_addr)
 {

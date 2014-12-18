@@ -5,6 +5,9 @@
  * redis cluster slots
  */
 
+#ifndef  CLUSTER_SLOTS_H_
+#define  CLUSTER_SLOTS_H_
+
 #include  <stdint.h>
 #include  <vector>
 #include  "Cluster_Redis.h"
@@ -12,21 +15,26 @@
 using std::vector;
 using std::pair;
 
-#ifndef  CLUSTER_SLOTS_H_
-#define  CLUSTER_SLOTS_H_
+enum CLUSTER_NODE_TYPE {
+    CLUSTER_NODE_ALL,
+    CLUSTER_NODE_MASTER,
+    CLUSTER_NODE_SLAVE
+};
 
 class RedisNodeGroup {
     public:
-        explicit RedisNodeGroup() { seed_ = time(NULL); };
+        explicit RedisNodeGroup():next_(0) { seed_ = time(NULL); };
         ~RedisNodeGroup(){};
         void set_master(ClusterRedis *cr);
         void add_node(ClusterRedis *cr);
         void show_nodes();
-        ClusterRedis *get_client(bool is_write);
+        ClusterRedis *get_client(CLUSTER_NODE_TYPE type);
+        inline int32_t get_nodes_count() { return nodes_.size(); }
     private:
         vector<ClusterRedis *> nodes_;
         ClusterRedis *master_;
         unsigned int seed_;
+        int32_t next_;
 };
 
 class ClusterSlots {
@@ -41,9 +49,10 @@ class ClusterSlots {
         inline void set_to(int32_t to) { to_ = to; };
         inline int32_t get_to() { return to_; }
         inline void add_node(ClusterRedis *cr, bool flag);
-        inline ClusterRedis *get_client(bool is_write) {
-            return node_group_.get_client(is_write);
+        inline ClusterRedis *get_client(CLUSTER_NODE_TYPE type) {
+            return node_group_.get_client(type);
         }
+        inline int32_t get_nodes_count() { return node_group_.get_nodes_count(); }
 
         vector<pair<string, int32_t> > ip_ports_;
 

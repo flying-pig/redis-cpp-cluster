@@ -33,10 +33,19 @@ void RedisNodeGroup::show_nodes()
     }
 }
 
-ClusterRedis *RedisNodeGroup::get_client(bool is_write)
+ClusterRedis *RedisNodeGroup::get_client(CLUSTER_NODE_TYPE type)
 {
-    if (is_write)
+    if (type == CLUSTER_NODE_MASTER)
         return master_;
+    else if (type == CLUSTER_NODE_SLAVE){
+        ClusterRedis *cr = NULL;
+        if (next_ >= (int32_t)nodes_.size()) {
+            next_ = 0;
+        }
+        cr = nodes_[next_++];
+        if (cr == master_) return nodes_[next_++];
+        return cr;
+    }
 
     int32_t num = rand_r(&seed_) % nodes_.size();
     return nodes_[num];
