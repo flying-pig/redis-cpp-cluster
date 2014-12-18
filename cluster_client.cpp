@@ -113,13 +113,10 @@ bool ClusterClient::startup()
         for (; itr2 != itr->ip_ports_.end(); ++itr2) {
             ClusterRedis *cr = new ClusterRedis;
             // test will_try is flase
-            if (cr->Init(itr2->first.c_str(), itr2->second, is_master, false)) {
-                if (is_master) is_master = false;
-                // the node may not connect tmp
-                //continue;
-            }
+            cr->Init(itr2->first.c_str(), itr2->second, is_master, false);
+            // the node may not connect tmp
             itr->add_node(cr, is_master);
-            is_master = false;
+            if (is_master) is_master = false;
         }
     }
     return true;
@@ -310,7 +307,7 @@ redisReply *ClusterClient::redis_command(int32_t slot_id, bool is_write,
     va_list ap;
     curr_cr_ = get_slots_client(slot_id, CLUSTER_NODE_MASTER);
     // test for slave get
-    curr_cr_ = NULL;
+    //curr_cr_ = NULL;
     if (curr_cr_ == NULL) {
         if (is_write) {
             return NULL;
