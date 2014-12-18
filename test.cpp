@@ -29,7 +29,7 @@ int main(int argc, char** args)
     int32_t time_use_usec;
     int32_t time_use_msec;
     gettimeofday(&start, NULL);
-    int res = cr.String_Set("aaaa01", "10000000000", 300);
+    int res = cr.String_Set("aaaa01", "10000000001", 300);
     gettimeofday(&end, NULL);
 
     //std::exit(2);
@@ -38,9 +38,9 @@ int main(int argc, char** args)
     cout << "time use: " << time_use_usec << "usec" << endl;
     time_use_msec = (end.tv_sec - start.tv_sec) * 1000 + (end.tv_usec - start.tv_usec) / 1000;
     cout << "time use: " << time_use_msec << "msec" << endl;
-    cr.String_Set("aaaa02", "20000000000", 300);
-    cr.String_Set("aaaa03", "30000000000", 300);
-    cr.String_Set("aaaa04", "40000000000", 300);
+    cr.String_Set("aaaa02", "20000000001", 300);
+    cr.String_Set("aaaa03", "30000000001", 300);
+    cr.String_Set("aaaa04", "40000000001", 300);
 
     cout << "Get testing ........" << endl;
     string value1;

@@ -112,6 +112,7 @@ bool ClusterClient::startup()
         bool is_master = true;
         for (; itr2 != itr->ip_ports_.end(); ++itr2) {
             ClusterRedis *cr = new ClusterRedis;
+            // test will_try is flase
             if (cr->Init(itr2->first.c_str(), itr2->second, is_master, false)) {
                 if (is_master) is_master = false;
                 // the node may not connect tmp
@@ -308,6 +309,7 @@ redisReply *ClusterClient::redis_command(int32_t slot_id, bool is_write,
     redisReply *reply = NULL;
     va_list ap;
     curr_cr_ = get_slots_client(slot_id, CLUSTER_NODE_MASTER);
+    // test for slave get
     curr_cr_ = NULL;
     if (curr_cr_ == NULL) {
         if (is_write) {
@@ -325,10 +327,6 @@ redisReply *ClusterClient::redis_command(int32_t slot_id, bool is_write,
             curr_cr_ = slots->get_client(CLUSTER_NODE_SLAVE);
             if (!curr_cr_)
                 break;
-            char buf[1024] = {0};
-            va_start(ap, format);
-            vsnprintf(buf, 1024, format, ap);
-            va_end(ap);
             va_start(ap, format);
             reply = curr_cr_->redis_vCommand(format, ap);
             va_end(ap);
@@ -339,8 +337,9 @@ redisReply *ClusterClient::redis_command(int32_t slot_id, bool is_write,
                 cout << "len: " << reply->len << endl;
                 cout << "elements: " << reply->elements << endl;
             }
-            if (!reply || reply->type == REDIS_REPLY_ERROR) {
-                continue;
+            if (!(!reply || reply->type == REDIS_REPLY_ERROR
+                || reply->type == REDIS_REPLY_NIL)) {
+                break;
             }
         }
         return reply;
@@ -380,7 +379,7 @@ redisReply *ClusterClient::redis_command(int32_t slot_id, bool is_write,
                     va_start(ap, format);
                     reply = curr_cr_->redis_vCommand(format, ap);
                     va_end(ap);
-                    if (reply == NULL) {
+                    if (reply == NULL && !is_write) {
                         // the MOVED master node can't connect
                         // read operatoin connect to slave node
                         // and execute command, write operation not
@@ -397,6 +396,10 @@ redisReply *ClusterClient::redis_command(int32_t slot_id, bool is_write,
                             va_start(ap, format);
                             reply = curr_cr_->redis_vCommand(format, ap);
                             va_end(ap);
+                            if (!(!reply || reply->type == REDIS_REPLY_ERROR
+                                        || reply->type == REDIS_REPLY_NIL)) {
+                                break;
+                            }
                         }
 
                         return reply;
@@ -420,6 +423,10 @@ redisReply *ClusterClient::redis_command(int32_t slot_id, bool is_write,
         } else {
             // master can't connect
             // read operation use slave, write operation not
+            if (is_write) {
+                curr_cr_->ReleaseRetInfoInstance(ri);
+                return NULL;
+            }
             const char *ip = curr_cr_->get_ip();
             const int32_t port = curr_cr_->get_port();
             ClusterSlots *slots = get_one_slots(ip, port);
@@ -433,6 +440,10 @@ redisReply *ClusterClient::redis_command(int32_t slot_id, bool is_write,
                 va_start(ap, format);
                 reply = curr_cr_->redis_vCommand(format, ap);
                 va_end(ap);
+                if (!(!reply || reply->type == REDIS_REPLY_ERROR
+                            || reply->type == REDIS_REPLY_NIL)) {
+                    break;
+                }
             }
 
         }
