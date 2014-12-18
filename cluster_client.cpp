@@ -310,15 +310,11 @@ redisReply *ClusterClient::redis_command(int32_t slot_id, bool is_write,
     curr_cr_ = get_slots_client(slot_id, CLUSTER_NODE_MASTER);
     curr_cr_ = NULL;
     if (curr_cr_ == NULL) {
-        cout << "no master" << endl;
         if (is_write) {
             return NULL;
         }
-#if 1
-        cout << "use slave to get" << endl;
         ClusterSlots *slots = get_one_slots(slot_id);
         if (slots == NULL) {
-            cout << "get no slots" << endl;
             return NULL;
         }
         int32_t slave_count = slots->get_nodes_count();
@@ -333,7 +329,6 @@ redisReply *ClusterClient::redis_command(int32_t slot_id, bool is_write,
             va_start(ap, format);
             vsnprintf(buf, 1024, format, ap);
             va_end(ap);
-            cout << "command is: " << buf << endl;
             va_start(ap, format);
             reply = curr_cr_->redis_vCommand(format, ap);
             va_end(ap);
@@ -349,7 +344,6 @@ redisReply *ClusterClient::redis_command(int32_t slot_id, bool is_write,
             }
         }
         return reply;
-#endif
     }
     RetInfo *ri = curr_cr_->GetRetInfoInstance();
     if (ri == NULL) return NULL;
