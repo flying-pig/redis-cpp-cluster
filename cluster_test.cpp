@@ -25,6 +25,8 @@ int main(int argc, char *argv[])
 
     cr.Init("127.0.0.1:7000;127.0.0.1:7001;127.0.0.1:7002");
     cr.show_clients();
+    cr.startup();
+    cr.show_slots();
     FILE *keys_fd = std::fopen("./test_keys1", "r");
     if (keys_fd == NULL) return 2;
 

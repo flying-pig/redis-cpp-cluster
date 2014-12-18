@@ -51,7 +51,7 @@ public:
 	explicit ClusterRedis();
 	virtual ~ClusterRedis();
 
-	int32_t Init(const char *redis_ip, const int32_t redis_port);
+	int32_t Init(const char *redis_ip, const int32_t redis_port, bool is_master = false, bool will_try = true);
 	int32_t UnInit();
 	int32_t FreeSources();
 	int32_t ReConnect();
@@ -65,6 +65,9 @@ public:
 	/* < cluster op  */
 	RetInfo* SendAsk();
 	int32_t Cluster_GetSlots(deque<SlotInfo*> &slot);
+	int32_t readonly();
+	int32_t readwrite();
+	inline bool is_readonly() { return readonly_; }
 
 	/*< expire operation */
 	RetInfo* Expire(const char *key, int32_t expiration);
@@ -95,6 +98,9 @@ public:
 	RetInfo* Lua_Script(const char* script, const char *key, const char* field1, const char* field2, const char* field3);
 	char *get_ip() { return _redisIP; }
 	int32_t get_port() { return _redisPort; }
+	inline void up2master() { is_master_ = true; }
+	inline void down2slave() { is_master_ = false; }
+	inline bool is_master() { return is_master_; }
 private:
 	ClusterRedis(const ClusterRedis&);
 	ClusterRedis& operator=(const ClusterRedis&);
@@ -105,6 +111,8 @@ private:
 	redisContext *_redisContext;		 //redisClient context
 	redisReply *_redisReply;			 //redisClient reply result
 	deque<RetInfo *> _retInfoList;
+	bool is_master_;
+	bool readonly_;
 };
 
 #endif /* CLUSTER_REDIS_H_ */

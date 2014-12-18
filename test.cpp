@@ -3,6 +3,7 @@
 #include  <sys/time.h>
 #include "Cluster_Redis.h"
 #include "cluster_client.h"
+#include "cluster_slots.h"
 #include "log.h"
 
 using std::cout;
@@ -19,6 +20,10 @@ int main(int argc, char** args)
     cr.show_clients();
     cr.startup();
     cr.show_slots();
+    ClusterSlots *slots = cr.get_one_slots("127.0.0.1", 7000);
+    cout << "#################" << endl;
+    if (slots) slots->show_slot();
+    cout << "#################" << endl;
     struct timeval start;
     struct timeval end;
     int32_t time_use_usec;

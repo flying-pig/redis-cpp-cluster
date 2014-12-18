@@ -23,7 +23,7 @@ enum CLUSTER_NODE_TYPE {
 
 class RedisNodeGroup {
     public:
-        explicit RedisNodeGroup():next_(0) { seed_ = time(NULL); };
+        explicit RedisNodeGroup():master_(NULL),next_(0) { seed_ = time(NULL); };
         ~RedisNodeGroup(){};
         void set_master(ClusterRedis *cr);
         void add_node(ClusterRedis *cr);
@@ -40,7 +40,7 @@ class RedisNodeGroup {
 
 class ClusterSlots {
     public:
-        explicit ClusterSlots() {};
+        explicit ClusterSlots():from_(0), to_(0) {};
         ~ClusterSlots(){};
         ClusterSlots(int32_t from, int32_t to);
         void add_node_info(pair<string, int32_t> ip_port);

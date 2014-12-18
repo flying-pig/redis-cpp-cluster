@@ -29,7 +29,8 @@ class ClusterClient {
         void show_clients();
         void show_slots();
         bool startup();
-        redisReply *redis_command(int32_t slot_id, const char *format, ...);
+        redisReply *redis_command(int32_t slot_id, bool is_write,
+                                  const char *format, ...);
         int32_t String_Set(const char *key,
                 const char *value,
                 int32_t expiration);
@@ -40,6 +41,8 @@ class ClusterClient {
         ClusterRedis *get_slots_client(const int32_t slot_id, CLUSTER_NODE_TYPE type);
         int32_t get_slots_nodes_count(const char *key);
         int32_t get_slots_nodes_count(const int32_t slot_id);
+        ClusterSlots *get_one_slots(const char *ip, const int32_t port);
+        ClusterSlots *get_one_slots(const int32_t slot_id);
 
     private:
         map<string, ClusterRedis *> clients;

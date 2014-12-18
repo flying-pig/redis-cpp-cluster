@@ -12,7 +12,8 @@
 #include <cstdio>
 
 ClusterRedis::ClusterRedis():_redisIP(NULL), _redisPort(0),
-_redisContext(NULL), _redisReply(NULL) {
+_redisContext(NULL), _redisReply(NULL),
+is_master_(false), readonly_(false) {
 	// TODO Auto-generated constructor stub
 
 }
@@ -37,18 +38,34 @@ int32_t ClusterRedis::Init() {
 
 	//test, connect Redis-server
 	//if (this->Connect_Ping()) return -3;
+	if (!is_master_) {
+	    _redisReply = (redisReply *)redisCommand(_redisContext, "readonly");
+	    if (_redisReply) {
+		if (_redisReply->type == REDIS_REPLY_STATUS
+		    && !strcmp(_redisReply->str, "OK"))
+		{
+		    logg(DEBUG, "set to readonly");
+		    readonly_ = true;
+		    return 0;
+		}
+	    }
+	    return -2;
+	}
 
 	this->FreeSources();
 	return 0;
 }
 
-int32_t ClusterRedis::Init(const char *redis_ip, const int32_t redis_port) {
+int32_t ClusterRedis::Init(const char *redis_ip, const int32_t redis_port, bool is_master, bool will_try) {
 	if (!redis_ip) return -1;
 
 	struct timeval timeout = { 1, 500000}; // 1.5 seconds
-	_redisContext = redisConnectWithTimeout(redis_ip, redis_port, timeout);
+	// test will_try
+	if (will_try)
+	    _redisContext = redisConnectWithTimeout(redis_ip, redis_port, timeout);
 	if (!_redisIP) _redisIP = strdup(redis_ip);
 	_redisPort = redis_port;
+	is_master_ = is_master;
 	if (!_redisContext || _redisContext->err) {
 		if (_redisContext) {
 			logg(ERROR, "fail to connect redis, ip: %s, port: %d, errorInfo: %s",
@@ -62,15 +79,57 @@ int32_t ClusterRedis::Init(const char *redis_ip, const int32_t redis_port) {
 
 	//test, connect Redis-server
 	//if (this->Connect_Ping()) return -3;
+	
+	if (!is_master_) {
+	    _redisReply = (redisReply *)redisCommand(_redisContext, "readonly");
+	    if (_redisReply) {
+		if (_redisReply->type == REDIS_REPLY_STATUS
+		    && !strcmp(_redisReply->str, "OK"))
+		{
+		    readonly_ = true;
+		    return 0;
+		}
+	    }
+	    return -2;
+	}
 
 	this->FreeSources();
 	return 0;
+}
+
+int32_t ClusterRedis::readonly()
+{
+    _redisReply = (redisReply *)redis_command("readonly");
+    if (_redisReply) {
+	if (_redisReply->type == REDIS_REPLY_STATUS
+		&& !strcmp(_redisReply->str, "OK"))
+	{
+	    readonly_ = true;
+	    return 0;
+	}
+    }
+    return -2;
+}
+
+int32_t ClusterRedis::readwrite()
+{
+    _redisReply = (redisReply *)redis_command("readwrite");
+    if (_redisReply) {
+	if (_redisReply->type == REDIS_REPLY_STATUS
+		&& !strcmp(_redisReply->str, "OK"))
+	{
+	    readonly_ = false;
+	    return 0;
+	}
+    }
+    return -2;
 }
 
 int32_t ClusterRedis::UnInit() {
 	if (_redisContext) redisFree(_redisContext);
 	if (_redisReply) freeReplyObject(_redisReply);
 	if (_redisIP) free(_redisIP);
+	readonly_ = false;
 
 	for (uint32_t i = 0; i < _retInfoList.size(); i++) {
 		RetInfo *ri = _retInfoList[i];
@@ -199,16 +258,20 @@ redisReply *ClusterRedis::redis_vCommand(const char *format, va_list ap)
 	return NULL;
     }
     redisReply *reply = NULL;
-    reply = (redisReply *)redisvCommand(_redisContext, format, ap);
+    va_list args;
+    va_copy(args, ap);
+    reply = (redisReply *)redisvCommand(_redisContext, format, args);
     if (!reply || reply->type == REDIS_REPLY_ERROR) {
 	if (reply) {
 	    char buf[1024] = {0};
-	    vsnprintf(buf, 1024, format, ap);
+	    va_copy(args, ap);
+	    vsnprintf(buf, 1024, format, args);
 	    logg("ERROR", "%s", buf);
 	}
 	FreeSources();
 	if (ReConnect() < 0) return NULL;
-	reply = (redisReply *)redisvCommand(_redisContext, format, ap);
+	va_copy(args, ap);
+	reply = (redisReply *)redisvCommand(_redisContext, format, args);
 	return reply;
     }
 

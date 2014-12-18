@@ -22,9 +22,11 @@ void RedisNodeGroup::add_node(ClusterRedis *cr)
 
 void RedisNodeGroup::show_nodes()
 {
+    if (master_) {
     cout << "master: " << master_->get_ip()
          << ":" << master_->get_port()
          << endl;
+    }
 
     cout << "all nodes: " << endl;
     vector<ClusterRedis *>::iterator itr = nodes_.begin();
