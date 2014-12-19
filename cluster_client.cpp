@@ -375,9 +375,6 @@ redisReply *ClusterClient::redis_vcommand(int32_t slot_id, bool is_write,
 
     va_copy(ap, arg);
     reply = (redisReply *)curr_cr_->redis_vCommand(format, ap);
-    // test
-    //freeReplyObject(reply);
-    //reply = NULL;
     if (reply == NULL || reply->type == REDIS_REPLY_ERROR) {
         if (reply) {
             RetInfo *ri = curr_cr_->GetRetInfoInstance();
