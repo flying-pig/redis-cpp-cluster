@@ -26,10 +26,16 @@ class ClusterClient {
         ~ClusterClient() {};
         int32_t Init(const char *redis_master_ips);
         int32_t Uninit();
+        bool cluster_slots();
         void show_clients();
         void show_slots();
         bool startup();
+        bool reslots();
         redisReply *redis_command(int32_t slot_id, bool is_write,
+                                  const char *format, ...);
+        redisReply *redis_vcommand(int32_t slot_id, bool is_write,
+                                   const char *format, va_list arg);
+        redisReply *__redis_command(int32_t slot_id, bool is_write,
                                   const char *format, ...);
         int32_t String_Set(const char *key,
                 const char *value,

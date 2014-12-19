@@ -105,9 +105,11 @@ int32_t ClusterRedis::readonly()
 		&& !strcmp(_redisReply->str, "OK"))
 	{
 	    readonly_ = true;
+	    this->FreeSources();
 	    return 0;
 	}
     }
+    this->FreeSources();
     return -2;
 }
 
@@ -119,9 +121,11 @@ int32_t ClusterRedis::readwrite()
 		&& !strcmp(_redisReply->str, "OK"))
 	{
 	    readonly_ = false;
+	    this->FreeSources();
 	    return 0;
 	}
     }
+    this->FreeSources();
     return -2;
 }
 

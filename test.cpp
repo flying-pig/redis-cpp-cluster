@@ -15,7 +15,7 @@ int main(int argc, char** args)
     (void)args;
     ClusterClient cr;
 
-    cr.Init("127.0.0.1:7010;127.0.0.1:7011;127.0.0.1:7002");
+    cr.Init("127.0.0.1:7010;127.0.0.1:7001;127.0.0.1:7002");
     //cr.Init("192.168.5.209:30005;192.168.5.209:36005;192.168.5.213:30004;192.168.5.213:30005;192.168.5.209:30004;192.168.5.216:30005");
     cr.show_clients();
     cr.startup();
@@ -50,7 +50,8 @@ int main(int argc, char** args)
     string value5;
 
 
-    cr.String_Get("aaaa01", value1);
+    res = cr.String_Get("aaaa01", value1);
+    printf("aaaa01 res: %d\n", res);
     cr.String_Get("aaaa02", value2);
     cr.String_Get("aaaa03", value3);
     gettimeofday(&start, NULL);
